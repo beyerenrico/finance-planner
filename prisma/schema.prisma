@@ -11,23 +11,24 @@ datasource db {
 }
 
 model User {
-  id                  String                @id @unique
-  name                String
-  email               String                @unique
-  session             Session[]
-  Key                 Key[]
-  Factor              Factor?
-  PasswordResetToken  PasswordResetToken[]
-  EmailVerifyToken    EmailVerifyToken[]
-  verified            Boolean               @default(false)
-  created_at          DateTime              @default(dbgenerated("NOW()"))
-  updated_at          DateTime              @default(dbgenerated("NOW()"))
+  id                 String               @id @unique @default(uuid())
+  name               String
+  email              String               @unique
+  session            Session[]
+  key                Key[]
+  factor             Factor?
+  passwordResetToken PasswordResetToken[]
+  emailVerifyToken   EmailVerifyToken[]
+  planners           Planner[]
+  verified           Boolean              @default(false)
+  created_at         DateTime             @default(dbgenerated("NOW()"))
+  updated_at         DateTime             @default(dbgenerated("NOW()"))
 
   @@map("user")
 }
 
 model Session {
-  id             String @id @unique
+  id             String @id @unique @default(uuid())
   user_id        String
   active_expires BigInt
   idle_expires   BigInt
@@ -38,49 +39,91 @@ model Session {
 }
 
 model Key {
-  id              String    @id @unique
+  id              String   @id @unique @default(uuid())
   hashed_password String?
   user_id         String
   primary         Boolean
-  user            User      @relation(references: [id], fields: [user_id], onDelete: Cascade)
-  created_at      DateTime  @default(dbgenerated("NOW()"))
-  updated_at      DateTime  @default(dbgenerated("NOW()"))
+  user            User     @relation(references: [id], fields: [user_id], onDelete: Cascade)
+  created_at      DateTime @default(dbgenerated("NOW()"))
+  updated_at      DateTime @default(dbgenerated("NOW()"))
 
   @@index([user_id])
   @@map("key")
 }
 
 model PasswordResetToken {
-  id        String    @id @unique @default(cuid())
-  token     String    @unique @default(cuid())
-  expires   DateTime  @default(dbgenerated("NOW() + interval '1 day'"))
-  user_id   String
-  user      User      @relation(references: [id], fields: [user_id], onDelete: Cascade)
+  id      String   @id @unique @default(uuid())
+  token   String   @unique @default(uuid())
+  expires DateTime @default(dbgenerated("NOW() + interval '1 day'"))
+  user_id String
+  user    User     @relation(references: [id], fields: [user_id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("password_reset_token")
 }
 
 model EmailVerifyToken {
-  id        String    @id @unique @default(cuid())
-  token     String    @unique @default(cuid())
-  expires   DateTime  @default(dbgenerated("NOW() + interval '15 minutes'"))
-  user_id   String
-  user      User      @relation(references: [id], fields: [user_id], onDelete: Cascade)
+  id      String   @id @unique @default(uuid())
+  token   String   @unique @default(uuid())
+  expires DateTime @default(dbgenerated("NOW() + interval '15 minutes'"))
+  user_id String
+  user    User     @relation(references: [id], fields: [user_id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("email_verify_token")
 }
 
 model Factor {
-  id        String  @id @unique @default(cuid())
-  secret    String  @unique
-  uri       String
-  qr        String
-  verified  Boolean @default(false)
-  user_id   String  @unique
-  user      User    @relation(references: [id], fields: [user_id], onDelete: Cascade)
+  id       String  @id @unique @default(uuid())
+  secret   String  @unique
+  uri      String
+  qr       String
+  verified Boolean @default(false)
+  user_id  String  @unique
+  user     User    @relation(references: [id], fields: [user_id], onDelete: Cascade)
 
   @@index([user_id])
   @@map("factor")
+}
+
+// Add your own data models below
+
+model Planner {
+  id           String        @id @unique @default(uuid())
+  name         String
+  transactions Transaction[]
+  contracts    Contract[]
+  user_id      String
+  user         User          @relation(references: [id], fields: [user_id], onDelete: Cascade)
+  created_at   DateTime      @default(dbgenerated("NOW()"))
+  updated_at   DateTime      @default(dbgenerated("NOW()"))
+
+  @@index([user_id])
+  @@map("planner")
+}
+
+model Transaction {
+  id          String    @id @unique @default(uuid())
+  sender      String
+  receiver    String
+  amount      Float
+  date        DateTime
+  contract    Contract? @relation(references: [id], fields: [contract_id], onDelete: Cascade)
+  contract_id String?
+  planner     Planner   @relation(references: [id], fields: [planner_id], onDelete: Cascade)
+  planner_id  String
+
+  @@index([planner_id])
+  @@map("transaction")
+}
+
+model Contract {
+  id           String        @id @unique @default(uuid())
+  name         String
+  planner      Planner       @relation(references: [id], fields: [planner_id], onDelete: Cascade)
+  planner_id   String
+  transactions Transaction[]
+
+  @@index([planner_id])
+  @@map("contract")
 }
